@@ -1,6 +1,9 @@
 buildscript {
     repositories {
         google()
+        //maven {
+        //   url 'https://maven.google.com'
+        //}
         jcenter()
     }
     dependencies {
@@ -19,6 +22,9 @@ def libVersion = "0.3.10"
 allprojects {
   repositories {
       google()
+      //maven {
+      //  url 'https://maven.google.com'
+      //}
       jcenter()
   }
 }
@@ -102,9 +108,11 @@ task swig {
     }
 }
 
-task kaldi(type: Exec) {
-    commandLine './build-kaldi.sh'
-    environment ANDROID_SDK_HOME: android.getSdkDirectory()
-}
 
-preBuild.dependsOn kaldi, swig
+//task kaldi(type: Exec) {
+//    commandLine './build-kaldi.sh'
+//    environment ANDROID_SDK_HOME: android.getSdkDirectory()
+//}
+
+//preBuild.dependsOn kaldi, swig
+preBuild.dependsOn swig

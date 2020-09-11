@@ -34,6 +34,7 @@ set -x
 OS_NAME=`echo $(uname -s) | tr '[:upper:]' '[:lower:]'`
 ANDROID_NDK_HOME=$ANDROID_SDK_HOME/ndk-bundle
 ANDROID_TOOLCHAIN_PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/${OS_NAME}-x86_64
+WORKDIR_REPOS=`pwd`/build/repos
 WORKDIR_X86=`pwd`/build/kaldi_x86
 WORKDIR_X86_64=`pwd`/build/kaldi_x86_64
 WORKDIR_ARM32=`pwd`/build/kaldi_arm_32
@@ -41,11 +42,21 @@ WORKDIR_ARM64=`pwd`/build/kaldi_arm_64
 PATH=$PATH:$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/${OS_NAME}-x86_64/bin
 OPENFST_VERSION=1.6.7
 
-mkdir -p $WORKDIR_ARM64/local/lib $WORKDIR_ARM32/local/lib $WORKDIR_X86_64/local/lib $WORKDIR_X86/local/lib
+mkdir -p $WORKDIR_REPOS $WORKDIR_ARM64/local/lib $WORKDIR_ARM32/local/lib $WORKDIR_X86_64/local/lib $WORKDIR_X86/local/lib
+
+#clone repository
+cd $WORKDIR_REPOS
+git clone https://github.com/simonlynen/android_libs
+git clone -b v0.3.7 --single-branch https://github.com/xianyi/OpenBLAS 
+git clone -b android-mix --single-branch https://github.com/alphacep/kaldi
+git clone https://github.com/alphacep/openfst
 
 # Build standalone CLAPACK since gfortran is missing
-cd build
-git clone https://github.com/simonlynen/android_libs
+cd ..
+#git clone https://github.com/simonlynen/android_libs
+rm -rf android_libs
+cp -r repos/android_libs .
+
 cd android_libs/lapack
 sed -i.bak -e 's/APP_STL := gnustl_static/APP_STL := c++_static/g' jni/Application.mk && \
 sed -i.bak -e 's/android-10/android-21/g' project.properties && \
@@ -106,13 +117,19 @@ esac
 
 # openblas first
 cd $WORKDIR
-git clone -b v0.3.7 --single-branch https://github.com/xianyi/OpenBLAS
+# git clone -b v0.3.7 --single-branch https://github.com/xianyi/OpenBLAS
+rm -rf OpenBLAS
+cp -r ../repos/OpenBLAS .
+
 make -C OpenBLAS TARGET=$BLAS_ARCH ONLY_CBLAS=1 AR=$AR CC=$CC HOSTCC=gcc ARM_SOFTFP_ABI=1 USE_THREAD=0 NUM_THREADS=1 -j4
 make -C OpenBLAS install PREFIX=$WORKDIR/local
 
 # tools directory --> we'll only compile OpenFST
 cd $WORKDIR
-git clone https://github.com/alphacep/openfst
+#git clone https://github.com/alphacep/openfst
+rm -rf openfst
+cp -r ../repos/openfst .
+
 cd openfst
 autoreconf -i
 CXX=$CXX CXXFLAGS="$ARCHFLAGS -O3 -DFST_NO_DYNAMIC_LINKING" ./configure --prefix=${WORKDIR}/local \
@@ -123,7 +140,10 @@ make install
 
 # Kaldi itself
 cd $WORKDIR
-git clone -b android-mix --single-branch https://github.com/alphacep/kaldi
+# git clone -b android-mix --single-branch https://github.com/alphacep/kaldi
+rm -rf kaldi
+cp -r ../repos/kaldi .
+
 cd $WORKDIR/kaldi/src
 if [ "`uname`" == "Darwin"  ]; then
   sed -i.bak -e 's/libfst.dylib/libfst.a/' configure
